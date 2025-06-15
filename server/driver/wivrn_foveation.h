@@ -46,7 +46,7 @@ class wivrn_foveation
 	std::array<to_headset::foveation_parameter, 2> params;
 
 	vk::raii::CommandPool command_pool;
-	vk::raii::CommandBuffer cmd;
+	vk::CommandBuffer cmd; // raw buffer handle—assigned post-allocation
 	buffer_allocation host_buffer;
 	vk::Buffer gpu_buffer = nullptr;
 
