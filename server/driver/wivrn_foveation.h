@@ -46,7 +46,7 @@ class wivrn_foveation
 	std::array<to_headset::foveation_parameter, 2> params;
 
 	vk::raii::CommandPool command_pool;
-	vk::CommandBuffer cmd; // raw buffer handle—assigned post-allocation
+	vk::raii::CommandBuffer cmd;  // now an RAII-managed buffer
 	buffer_allocation host_buffer;
 	vk::Buffer gpu_buffer = nullptr;
 
@@ -70,7 +70,7 @@ public:
 	void update_tracking(const from_headset::tracking &, const clock_offset &);
 	std::array<to_headset::foveation_parameter, 2> get_parameters();
 
-	vk::CommandBuffer update_foveation_buffer(
+	vk::raii::CommandBuffer update_foveation_buffer(
 	        vk::Buffer target,
 	        bool flip_y,
 	        xrt_rect src[2],
