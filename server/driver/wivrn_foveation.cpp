@@ -254,14 +254,10 @@ void wivrn_foveation::compute_params(
 	}
 }
 
-wivrn_foveation::wivrn_foveation(wivrn_vk_bundle & bundle, const xrt_hmd_parts & hmd) :
-        foveated_width(hmd.screens[0].w_pixels / 2),
+wivrn_foveation::wivrn_foveation(wivrn_vk_bundle & bundle, const xrt_hmd_parts & hmd)
+        : foveated_width(hmd.screens[0].w_pixels / 2),
         foveated_height(hmd.screens[0].h_pixels),
-        command_pool(bundle.device, vk::CommandPoolCreateInfo{.queueFamilyIndex = bundle.queue_family_index}),
-        cmd(std::move(bundle.device.allocateCommandBuffers({
-                .commandPool = command_pool,
-                .commandBufferCount = 1,
-        })[0])),
+        command_pool(bundle.device, vk::CommandPoolCreateInfo{ {.queueFamilyIndex = bundle.queue_family_index} }),
         host_buffer(
                 bundle.device,
                 {
@@ -273,9 +269,18 @@ wivrn_foveation::wivrn_foveation(wivrn_vk_bundle & bundle, const xrt_hmd_parts &
                         .usage = VMA_MEMORY_USAGE_AUTO,
                 })
 {
-	bundle.name(command_pool, "foveation command pool");
-	bundle.name(cmd, "foveation command buffer");
-	bundle.name(vk::Buffer(host_buffer), "foveation staging buffer");
+        // Allocate the RAII CommandBuffer
+        vk::CommandBufferAllocateInfo allocInfo{};
+        allocInfo.commandPool = *command_pool;
+        allocInfo.level = vk::CommandBufferLevel::ePrimary;
+        allocInfo.commandBufferCount = 1;
+        auto uniqueCmdBuffers = bundle.device.allocateCommandBuffersUnique(allocInfo);
+        cmd = std::move(uniqueCmdBuffers.front());
+
+        // Naming for debugging
+        bundle.name(command_pool, "foveation command pool");
+        bundle.name(cmd, "foveation command buffer");
+        bundle.name(vk::Buffer(host_buffer), "foveation staging buffer");
 }
 
 void wivrn_foveation::update_tracking(const from_headset::tracking & tracking, const clock_offset & offset)
@@ -368,7 +373,7 @@ bool operator==(const xrt_fov & a, const xrt_fov & b)
 	return a.angle_left == b.angle_left and a.angle_right == b.angle_right and a.angle_up == b.angle_up and a.angle_down == b.angle_down;
 }
 
-vk::CommandBuffer wivrn_foveation::update_foveation_buffer(
+vk::raii::CommandBuffer wivrn_foveation::update_foveation_buffer(
         vk::Buffer target,
         bool flip_y,
         xrt_rect source[2],
@@ -408,6 +413,6 @@ vk::CommandBuffer wivrn_foveation::update_foveation_buffer(
 		fill_ubo(ubo->x + view * RENDER_FOVEATION_BUFFER_DIMENSIONS, params[view].x, false, source[view].offset.w, source[view].extent.w, foveated_width);
 		fill_ubo(ubo->y + view * RENDER_FOVEATION_BUFFER_DIMENSIONS, params[view].y, flip_y, source[view].offset.h, source[view].extent.h, foveated_height);
 	}
-	return cmd;
+	return std::move(cmd);
 }
 } // namespace wivrn
