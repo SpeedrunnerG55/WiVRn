@@ -383,7 +383,7 @@ bool operator==(const xrt_fov & a, const xrt_fov & b)
 	return a.angle_left == b.angle_left and a.angle_right == b.angle_right and a.angle_up == b.angle_up and a.angle_down == b.angle_down;
 }
 
-vk::raii::CommandBuffer wivrn_foveation::update_foveation_buffer(
+vk::CommandBuffer wivrn_foveation::update_foveation_buffer(
         vk::Buffer target,
         bool flip_y,
         xrt_rect source[2],
