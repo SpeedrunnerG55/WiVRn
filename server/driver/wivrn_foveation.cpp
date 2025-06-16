@@ -256,25 +256,27 @@ void wivrn_foveation::compute_params(
 
 wivrn_foveation::wivrn_foveation(wivrn_vk_bundle & bundle, const xrt_hmd_parts & hmd)
         : foveated_width(hmd.screens[0].w_pixels / 2),
-        foveated_height(hmd.screens[0].h_pixels),
-        command_pool(bundle.device, [&]() {
-                vk::CommandPoolCreateInfo poolInfo{};
-                poolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-                poolInfo.queueFamilyIndex = bundle.queue_family_index;
-                return poolInfo;
-        }()),
-        host_buffer(
-                bundle.device,
-                {
-                        .size = sizeof(render_compute_distortion_foveation_data),
-                        .usage = vk::BufferUsageFlagBits::eTransferSrc,
-                },
-                VmaAllocationCreateInfo{
-                        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-                        .usage = VMA_MEMORY_USAGE_AUTO,
-                })
+          foveated_height(hmd.screens[0].h_pixels),
+          command_pool(bundle.device, [&]() {
+                  vk::CommandPoolCreateInfo poolInfo{};
+                  poolInfo.sType = vk::StructureType::eCommandPoolCreateInfo;
+                  poolInfo.pNext = nullptr;
+                  poolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+                  poolInfo.queueFamilyIndex = bundle.queue_family_index;
+                  return poolInfo;
+          }()),
+          host_buffer(
+                  bundle.device,
+                  {
+                          .size = sizeof(render_compute_distortion_foveation_data),
+                          .usage = vk::BufferUsageFlagBits::eTransferSrc,
+                  },
+                  VmaAllocationCreateInfo{
+                          .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+                          .usage = VMA_MEMORY_USAGE_AUTO,
+                  })
 {
-        // Allocate a single raw CommandBuffer
+        // Allocate a single RAII CommandBuffer
         vk::CommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
         allocInfo.pNext = nullptr;
@@ -282,10 +284,10 @@ wivrn_foveation::wivrn_foveation(wivrn_vk_bundle & bundle, const xrt_hmd_parts &
         allocInfo.level = vk::CommandBufferLevel::ePrimary;
         allocInfo.commandBufferCount = 1;
 
-        auto cmdList = bundle.device.allocateCommandBuffers(allocInfo);
-        cmd = cmdList.front();
+        auto cmdList = bundle.device.allocateCommandBuffersUnique(allocInfo);
+        cmd = std::move(cmdList.front());
 
-        // Naming for debugging
+        // Naming for easier debugging
         bundle.name(command_pool, "foveation command pool");
         bundle.name(cmd, "foveation command buffer");
         bundle.name(vk::Buffer(host_buffer), "foveation staging buffer");
