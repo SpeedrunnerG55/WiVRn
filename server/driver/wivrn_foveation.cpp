@@ -276,7 +276,7 @@ wivrn_foveation::wivrn_foveation(wivrn_vk_bundle & bundle, const xrt_hmd_parts &
                           .usage = VMA_MEMORY_USAGE_AUTO,
                   })
 {
-        // Allocate a single RAII CommandBuffer
+        // Allocate a single raw CommandBuffer
         vk::CommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
         allocInfo.pNext = nullptr;
@@ -284,8 +284,8 @@ wivrn_foveation::wivrn_foveation(wivrn_vk_bundle & bundle, const xrt_hmd_parts &
         allocInfo.level = vk::CommandBufferLevel::ePrimary;
         allocInfo.commandBufferCount = 1;
 
-        auto cmdList = bundle.device.allocateCommandBuffersUnique(allocInfo);
-        cmd = std::move(cmdList.front());
+        auto cmdList = bundle.device.allocateCommandBuffers(allocInfo);
+        cmd = cmdList.front();
 
         // Naming for easier debugging
         bundle.name(command_pool, "foveation command pool");
